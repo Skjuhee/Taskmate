@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TaskMate - Task Manager</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f0f0f0;
+      margin: 0;
+      padding: 0;
+      color: #2c3e50;
+    }
+    .container {
+      max-width: 900px;
+      margin: 30px auto;
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      padding: 20px 30px;
+    }
+    h1 {
+      text-align: center;
+      color: #2c3e50;
+    }
+    form {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr auto;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    input {
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      width: 100%;
+    }
+    button {
+      padding: 10px 15px;
+      border: none;
+      border-radius: 5px;
+      color: white;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+    button:hover {
+      opacity: 0.9;
+    }
+    .add { background: #2ecc71; }
+    .complete { background: #3498db; }
+    .delete { background: #e74c3c; }
+    .progress { background: #9b59b6; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    th, td {
+      padding: 10px;
+      border-bottom: 1px solid #ddd;
+      text-align: center;
+    }
+    th {
+      background-color: #ecf0f1;
+    }
+    tr:hover {
+      background-color: #f9f9f9;
+    }
+    canvas {
+      display: block;
+      margin: 20px auto;
+      max-width: 300px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h1>📝 TaskMate</h1>
+
+  <form id="taskForm">
+    <input type="text" id="title" placeholder="Task Title" required>
+    <input type="text" id="category" placeholder="Category">
+    <input type="date" id="deadline">
+    <button type="submit" class="add">Add Task</button>
+  </form>
+
+  <div>
+    <button class="complete" onclick="markComplete()">Mark Complete</button>
+    <button class="delete" onclick="deleteTask()">Delete Task</button>
+    <button class="progress" onclick="showProgress()">Show Progress</button>
+  </div>
+
+  <table id="taskTable">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Title</th>
+        <th>Category</th>
+        <th>Deadline</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <canvas id="progressChart"></canvas>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+let tasks = JSON.parse(localStorage.getItem('tasks') || '[]');
+let selectedId = null;
+
+function saveTasks() {
+  localStorage.setItem('tasks', JSON.stringify(tasks));
+  loadTasks();
+}
+
+function loadTasks() {
+  const tbody = document.querySelector('#taskTable tbody');
+  tbody.innerHTML = '';
+  tasks.forEach((task, index) => {
+    const tr = document.createElement('tr');
+    tr.onclick = () => selectRow(index);
+    tr.style.backgroundColor = (selectedId === index) ? '#dfe6e9' : 'white';
+    tr.innerHTML = `
+      <td>${index + 1}</td>
+      <td>${task.title}</td>
+      <td>${task.category}</td>
+      <td>${task.deadline}</td>
+      <td>${task.status}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+document.getElementById('taskForm').addEventListener('submit', function(e) {
+  e.preventDefault();
+  const title = document.getElementById('title').value.trim();
+  const category = document.getElementById('category').value;
+  const deadline = document.getElementById('deadline').value;
+  if (!title) return alert('Task title cannot be empty');
+  tasks.push({ title, category, deadline, status: 'Pending' });
+  saveTasks();
+  this.reset();
+});
+
+function selectRow(index) {
+  selectedId = (selectedId === index) ? null : index;
+  loadTasks();
+}
+
+function markComplete() {
+  if (selectedId === null) return alert('Select a task first!');
+  tasks[selectedId].status = 'Completed';
+  saveTasks();
+}
+
+function deleteTask() {
+  if (selectedId === null) return alert('Select a task to delete!');
+  tasks.splice(selectedId, 1);
+  selectedId = null;
+  saveTasks();
+}
+
+function showProgress() {
+  const completed = tasks.filter(t => t.status === 'Completed').length;
+  const pending = tasks.length - completed;
+  if (tasks.length === 0) return alert('No tasks to show progress.');
+
+  const ctx = document.getElementById('progressChart').getContext('2d');
+  new Chart(ctx, {
+    type: 'pie',
+    data: {
+      labels: ['Completed', 'Pending'],
+      datasets: [{
+        data: [completed, pending],
+        backgroundColor: ['#2ecc71', '#e74c3c']
+      }]
+    },
+    options: {
+      plugins: {
+        legend: { position: 'bottom' },
+        title: { display: true, text: 'Task Completion Progress' }
+      }
+    }
+  });
+}
+
+loadTasks();
+</script>
+</body>
+</html>
